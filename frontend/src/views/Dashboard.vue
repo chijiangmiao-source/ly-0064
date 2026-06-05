@@ -93,6 +93,25 @@
       </n-col>
     </n-row>
 
+    <n-row :gutter="16" class="mb-4">
+      <n-col :span="12">
+        <n-card title="近7天退货趋势" class="h-full">
+          <div ref="returnTrendChartRef" style="height: 320px;"></div>
+        </n-card>
+      </n-col>
+      <n-col :span="12">
+        <n-card title="退货最多原料排行" class="h-full">
+          <n-data-table
+            :columns="returnRankingColumns"
+            :data="stats?.return_ranking || []"
+            :bordered="false"
+            :pagination="false"
+            size="small"
+          />
+        </n-card>
+      </n-col>
+    </n-row>
+
     <n-row :gutter="16">
       <n-col :span="12">
         <n-card title="报损排行" class="h-full">
@@ -150,6 +169,8 @@ interface DashboardStats {
   usage_ranking: UsageRanking[]
   transfer_trend: TransferTrend[]
   transfer_ranking: TransferRanking[]
+  return_trend: ReturnTrend[]
+  return_ranking: ReturnRanking[]
 }
 
 interface DamageRanking {
@@ -188,6 +209,20 @@ interface TransferRanking {
   transfer_count: number
 }
 
+interface ReturnTrend {
+  date: string
+  total_quantity: number
+  record_count: number
+}
+
+interface ReturnRanking {
+  material_id: number
+  material_name: string
+  material_code: string
+  total_quantity: number
+  return_count: number
+}
+
 interface CategoryStock {
   category_id: number
   category_name: string
@@ -210,6 +245,7 @@ const expiryWarnings = ref<ExpiryWarning[]>([])
 const chartRef = ref<HTMLElement | null>(null)
 const trendChartRef = ref<HTMLElement | null>(null)
 const transferTrendChartRef = ref<HTMLElement | null>(null)
+const returnTrendChartRef = ref<HTMLElement | null>(null)
 
 const rankingColumns = [
   { title: '排名', key: 'rank', width: 80, render: (_: any, index: number) => index + 1 },
@@ -233,6 +269,14 @@ const transferRankingColumns = [
   { title: '原料编号', key: 'material_code', width: 120 },
   { title: '调拨总量', key: 'total_quantity', width: 120 },
   { title: '调拨次数', key: 'transfer_count', width: 120 }
+]
+
+const returnRankingColumns = [
+  { title: '排名', key: 'rank', width: 80, render: (_: any, index: number) => index + 1 },
+  { title: '原料名称', key: 'material_name' },
+  { title: '原料编号', key: 'material_code', width: 120 },
+  { title: '退货总量', key: 'total_quantity', width: 120 },
+  { title: '退货次数', key: 'return_count', width: 120 }
 ]
 
 const warningColumns = [
@@ -278,6 +322,7 @@ async function fetchStats() {
     initChart()
     initTrendChart()
     initTransferTrendChart()
+    initReturnTrendChart()
   } catch (error) {
     message.error('获取统计数据失败')
   }
@@ -466,6 +511,74 @@ function initTransferTrendChart() {
           color: '#a855f7'
         },
         data: stats.value.transfer_trend.map((item: TransferTrend) => item.record_count)
+      }
+    ]
+  }
+  chart.setOption(option)
+}
+
+function initReturnTrendChart() {
+  if (!returnTrendChartRef.value || !stats.value) return
+
+  const chart = echarts.init(returnTrendChartRef.value)
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross',
+        label: {
+          backgroundColor: '#6a7985'
+        }
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: stats.value.return_trend.map((item: ReturnTrend) => item.date.slice(5))
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '退货数量',
+        position: 'left'
+      },
+      {
+        type: 'value',
+        name: '退货次数',
+        position: 'right'
+      }
+    ],
+    series: [
+      {
+        name: '退货数量',
+        type: 'line',
+        smooth: true,
+        itemStyle: {
+          color: '#e76565'
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(231, 101, 101, 0.3)' },
+            { offset: 1, color: 'rgba(231, 101, 101, 0.05)' }
+          ])
+        },
+        data: stats.value.return_trend.map((item: ReturnTrend) => item.total_quantity)
+      },
+      {
+        name: '退货次数',
+        type: 'line',
+        smooth: true,
+        yAxisIndex: 1,
+        itemStyle: {
+          color: '#f59e0b'
+        },
+        data: stats.value.return_trend.map((item: ReturnTrend) => item.record_count)
       }
     ]
   }

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, cast, Date
 
 from app.database import get_db
-from app.models import Material, DamageRecord, MaterialCategory, UsageRecord, TransferRecord
+from app.models import Material, DamageRecord, MaterialCategory, UsageRecord, TransferRecord, ReturnRecord
 from app.schemas import (
     DashboardStats,
     ExpiryWarningResponse,
@@ -15,7 +15,9 @@ from app.schemas import (
     UsageTrendResponse,
     UsageRankingResponse,
     TransferTrendResponse,
-    TransferRankingResponse
+    TransferRankingResponse,
+    ReturnTrendResponse,
+    ReturnRankingResponse
 )
 
 
@@ -195,6 +197,60 @@ class DashboardController(Controller):
             ) for row in transfer_ranking_data
         ]
 
+        return_trend_data = db.query(
+            cast(ReturnRecord.return_date, Date).label('return_date'),
+            func.sum(ReturnRecord.quantity).label('total_quantity'),
+            func.count(ReturnRecord.id).label('record_count')
+        ).filter(
+            ReturnRecord.return_date >= seven_days_ago,
+            ReturnRecord.return_date <= today
+        ).group_by(
+            cast(ReturnRecord.return_date, Date)
+        ).all()
+
+        return_trend_map = {}
+        for row in return_trend_data:
+            return_trend_map[row.return_date.isoformat()] = ReturnTrendResponse(
+                date=row.return_date.isoformat(),
+                total_quantity=row.total_quantity or 0,
+                record_count=row.record_count or 0
+            )
+
+        return_trend = []
+        for i in range(7):
+            d = today - timedelta(days=6 - i)
+            date_str = d.isoformat()
+            if date_str in return_trend_map:
+                return_trend.append(return_trend_map[date_str])
+            else:
+                return_trend.append(ReturnTrendResponse(
+                    date=date_str,
+                    total_quantity=0,
+                    record_count=0
+                ))
+
+        return_ranking_data = db.query(
+            ReturnRecord.material_id,
+            Material.name,
+            Material.code,
+            func.sum(ReturnRecord.quantity).label('total_quantity'),
+            func.count(ReturnRecord.id).label('return_count')
+        ).join(Material).group_by(
+            ReturnRecord.material_id,
+            Material.name,
+            Material.code
+        ).order_by(func.sum(ReturnRecord.quantity).desc()).limit(10).all()
+
+        return_ranking = [
+            ReturnRankingResponse(
+                material_id=row.material_id,
+                material_name=row.name,
+                material_code=row.code,
+                total_quantity=row.total_quantity or 0,
+                return_count=row.return_count or 0
+            ) for row in return_ranking_data
+        ]
+
         return DashboardStats(
             expiring_soon_count=expiring_soon_count,
             expired_count=expired_count,
@@ -205,7 +261,9 @@ class DashboardController(Controller):
             usage_trend=usage_trend,
             usage_ranking=usage_ranking,
             transfer_trend=transfer_trend,
-            transfer_ranking=transfer_ranking
+            transfer_ranking=transfer_ranking,
+            return_trend=return_trend,
+            return_ranking=return_ranking
         )
 
     async def get_expiry_warnings(self, db: Session) -> List[ExpiryWarningResponse]:

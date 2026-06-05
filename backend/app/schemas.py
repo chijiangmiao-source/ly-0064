@@ -289,6 +289,45 @@ class TransferRankingResponse(BaseModel):
     transfer_count: int
 
 
+class ReturnRecordBase(BaseModel):
+    material_id: int
+    store_id: int
+    quantity: float = Field(gt=0)
+    batch_number: str
+    return_date: Optional[date] = None
+    reason: str
+    remark: Optional[str] = None
+
+
+class ReturnRecordCreate(ReturnRecordBase):
+    pass
+
+
+class ReturnRecordResponse(ReturnRecordBase):
+    id: int
+    operator_id: Optional[int] = None
+    created_at: datetime
+    material: Optional[MaterialResponse] = None
+    store: Optional[StoreResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ReturnTrendResponse(BaseModel):
+    date: str
+    total_quantity: float
+    record_count: int
+
+
+class ReturnRankingResponse(BaseModel):
+    material_id: int
+    material_name: str
+    material_code: str
+    total_quantity: float
+    return_count: int
+
+
 class DashboardStats(BaseModel):
     expiring_soon_count: int
     expired_count: int
@@ -300,3 +339,5 @@ class DashboardStats(BaseModel):
     usage_ranking: List[UsageRankingResponse]
     transfer_trend: List[TransferTrendResponse]
     transfer_ranking: List[TransferRankingResponse]
+    return_trend: List[ReturnTrendResponse]
+    return_ranking: List[ReturnRankingResponse]

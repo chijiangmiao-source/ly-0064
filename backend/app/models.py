@@ -69,6 +69,7 @@ class Material(Base):
     open_records = relationship("OpenRecord", back_populates="material")
     damage_records = relationship("DamageRecord", back_populates="material")
     usage_records = relationship("UsageRecord", back_populates="material")
+    return_records = relationship("ReturnRecord", back_populates="material")
 
     @property
     def current_status(self):
@@ -161,3 +162,21 @@ class TransferRecord(Base):
     material = relationship("Material")
     from_store = relationship("Store", foreign_keys=[from_store_id])
     to_store = relationship("Store", foreign_keys=[to_store_id])
+
+
+class ReturnRecord(Base):
+    __tablename__ = "return_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    batch_number = Column(String(100), nullable=False)
+    return_date = Column(Date, default=date.today)
+    reason = Column(String(255), nullable=False)
+    operator_id = Column(Integer, ForeignKey("users.id"))
+    remark = Column(String(255))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    material = relationship("Material", back_populates="return_records")
+    store = relationship("Store")

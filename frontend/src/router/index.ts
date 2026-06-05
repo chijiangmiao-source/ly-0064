@@ -61,6 +61,11 @@ const routes = [
         path: 'transfer-records',
         name: 'TransferRecords',
         component: () => import('@/views/TransferRecords.vue')
+      },
+      {
+        path: 'return-records',
+        name: 'ReturnRecords',
+        component: () => import('@/views/ReturnRecords.vue')
       }
     ]
   }
