@@ -9,12 +9,13 @@
             placeholder="请选择门店"
             clearable
             style="width: 180px;"
+            @update:value="handleQueryStoreChange"
           />
         </n-form-item>
         <n-form-item label="原料">
           <n-select
             v-model:value="queryForm.material_id"
-            :options="materialOptions"
+            :options="queryMaterialOptions"
             placeholder="请选择原料"
             filterable
             clearable
@@ -48,7 +49,7 @@
           </n-space>
         </n-form-item>
       </n-form>
-      <n-button type="primary" @click="showModal = true">
+      <n-button type="primary" @click="openModal">
         <template #icon>
           <n-icon><add-outline /></n-icon>
         </template>
@@ -70,14 +71,16 @@
             v-model:value="form.store_id"
             :options="storeOptions"
             placeholder="请选择门店"
+            @update:value="handleFormStoreChange"
           />
         </n-form-item>
         <n-form-item label="原料" required>
           <n-select
             v-model:value="form.material_id"
-            :options="availableMaterialOptions"
-            placeholder="请选择原料"
+            :options="formMaterialOptions"
+            placeholder="请先选择门店"
             filterable
+            :disabled="!form.store_id"
             @update:value="handleMaterialSelect"
           />
         </n-form-item>
@@ -88,6 +91,7 @@
             :max="maxQuantity"
             step="0.01"
             placeholder="请输入数量"
+            :disabled="!form.material_id"
           />
           <span v-if="selectedMaterial" class="stock-tip">当前库存: {{ selectedMaterial.stock_quantity }}</span>
         </n-form-item>
@@ -112,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, h } from 'vue'
+import { ref, computed, onMounted, h, watch } from 'vue'
 import { useMessage, NButton } from 'naive-ui'
 import { AddOutline, SearchOutline } from '@vicons/ionicons5'
 import { format } from 'date-fns'
@@ -167,6 +171,16 @@ const form = ref({
   remark: ''
 })
 
+function statusLabel(status: string): string {
+  const map: Record<string, string> = {
+    in_stock: '在库',
+    opened: '已开封',
+    expired: '已过期',
+    out_of_stock: '无库存'
+  }
+  return map[status] || status
+}
+
 const selectedMaterial = computed<Material | null>(() => {
   if (!form.value.material_id) return null
   return materials.value.find(m => m.id === form.value.material_id) || null
@@ -180,39 +194,30 @@ const storeOptions = computed(() => {
   return stores.value.map(s => ({ label: s.name, value: s.id }))
 })
 
-const materialOptions = computed(() => {
-  return materials.value.map(m => ({
+const queryMaterialOptions = computed(() => {
+  let list = materials.value
+  if (queryForm.value.store_id) {
+    list = list.filter(m => m.store_id === queryForm.value.store_id || m.store_id === null)
+  }
+  return list.map(m => ({
     label: `${m.code} - ${m.name}`,
     value: m.id
   }))
 })
 
-const availableMaterialOptions = computed(() => {
-  const today = new Date()
-  return materials.value
-    .filter(m => {
-      if (m.stock_quantity <= 0) return false
-      if (m.current_status === 'expired') return false
-      if (m.current_status === 'opened') {
-        return true
-      }
-      return true
-    })
-    .map(m => ({
-      label: `${m.code} - ${m.name} (库存: ${m.stock_quantity}, 状态: ${statusLabel(m.current_status)})`,
-      value: m.id
-    }))
+const formMaterialOptions = computed(() => {
+  if (!form.value.store_id) return []
+  const list = materials.value.filter(m => {
+    if (m.store_id !== form.value.store_id && m.store_id !== null) return false
+    if (m.stock_quantity <= 0) return false
+    if (m.current_status === 'expired') return false
+    return true
+  })
+  return list.map(m => ({
+    label: `${m.code} - ${m.name} (库存: ${m.stock_quantity}, 状态: ${statusLabel(m.current_status)})`,
+    value: m.id
+  }))
 })
-
-function statusLabel(status: string): string {
-  const map: Record<string, string> = {
-    in_stock: '在库',
-    opened: '已开封',
-    expired: '已过期',
-    out_of_stock: '无库存'
-  }
-  return map[status] || status
-}
 
 const columns = [
   { title: 'ID', key: 'id', width: 80 },
@@ -271,6 +276,20 @@ async function fetchRecords() {
   } finally {
     loading.value = false
   }
+}
+
+function handleQueryStoreChange() {
+  queryForm.value.material_id = null
+}
+
+function handleFormStoreChange() {
+  form.value.material_id = null
+  form.value.quantity = null
+}
+
+function openModal() {
+  resetForm()
+  showModal.value = true
 }
 
 function resetQuery() {

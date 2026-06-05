@@ -49,12 +49,16 @@ class UsageRecordController(Controller):
         if not store:
             raise NotFoundException("门店不存在")
 
-        today = date.today()
-        if material.expiry_date and today > material.expiry_date:
-            raise ClientException("已过期原料不能继续领用")
+        if material.store_id and material.store_id != data.store_id:
+            raise ClientException("该原料不属于所选门店，不能领用")
 
-        if material.open_status and material.expiry_date and today > material.expiry_date:
-            raise ClientException("已开封失效的原料不能继续领用")
+        usage_date = data.usage_date or date.today()
+
+        if material.expiry_date and usage_date > material.expiry_date:
+            raise ClientException("该原料在领用日期已过期，不能领用")
+
+        if material.open_status and material.expiry_date and usage_date > material.expiry_date:
+            raise ClientException("该原料已开封并在领用日期已失效，不能领用")
 
         if data.quantity > material.stock_quantity:
             raise ClientException("领用数量不能超过当前库存")
