@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -45,9 +45,12 @@ class MaterialCategory(Base):
 
 class Material(Base):
     __tablename__ = "materials"
+    __table_args__ = (
+        UniqueConstraint('code', 'store_id', 'batch_number', name='uq_material_code_store_batch'),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
-    code = Column(String(50), unique=True, nullable=False, index=True)
+    code = Column(String(50), nullable=False, index=True)
     name = Column(String(100), nullable=False)
     specification = Column(String(100))
     category_id = Column(Integer, ForeignKey("material_categories.id"))
@@ -57,6 +60,7 @@ class Material(Base):
     open_date = Column(Date)
     expiry_date = Column(Date)
     shelf_life_days = Column(Integer, default=7)
+    batch_number = Column(String(100), default='')
     created_at = Column(DateTime, default=datetime.utcnow)
 
     category = relationship("MaterialCategory", back_populates="materials")
@@ -150,6 +154,7 @@ class TransferRecord(Base):
     quantity = Column(Float, nullable=False)
     transfer_date = Column(Date, default=date.today)
     operator_id = Column(Integer, ForeignKey("users.id"))
+    batch_number = Column(String(100))
     remark = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
 

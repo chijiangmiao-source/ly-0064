@@ -79,6 +79,7 @@ class MaterialBase(BaseModel):
     category_id: Optional[int] = None
     store_id: Optional[int] = None
     shelf_life_days: int = 7
+    batch_number: Optional[str] = ''
 
 
 class MaterialCreate(MaterialBase):
@@ -91,6 +92,7 @@ class MaterialUpdate(BaseModel):
     category_id: Optional[int] = None
     store_id: Optional[int] = None
     shelf_life_days: Optional[int] = None
+    batch_number: Optional[str] = None
 
 
 class MaterialResponse(MaterialBase):
@@ -247,6 +249,7 @@ class TransferRecordBase(BaseModel):
     to_store_id: int
     quantity: float = Field(gt=0)
     transfer_date: Optional[date] = None
+    batch_number: Optional[str] = None
     remark: Optional[str] = None
 
     @field_validator('to_store_id')

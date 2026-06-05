@@ -17,6 +17,13 @@
           style="width: 150px;"
         />
         <n-select
+          v-model:value="searchForm.store_id"
+          placeholder="选择门店"
+          clearable
+          :options="storeOptions"
+          style="width: 150px;"
+        />
+        <n-select
           v-model:value="searchForm.status"
           placeholder="选择状态"
           clearable
@@ -53,8 +60,14 @@
         <n-form-item label="原料名称" required>
           <n-input v-model:value="form.name" placeholder="请输入原料名称" />
         </n-form-item>
+        <n-form-item label="所属门店">
+          <n-select v-model:value="form.store_id" :options="storeOptions" placeholder="请选择门店" clearable />
+        </n-form-item>
         <n-form-item label="规格">
           <n-input v-model:value="form.specification" placeholder="请输入规格" />
+        </n-form-item>
+        <n-form-item label="批次号">
+          <n-input v-model:value="form.batch_number" placeholder="请输入批次号（不同批次请分别建档）" />
         </n-form-item>
         <n-form-item label="分类">
           <n-select v-model:value="form.category_id" :options="categoryOptions" placeholder="请选择分类" />
@@ -85,16 +98,24 @@ interface Material {
   name: string
   specification: string
   category_id: number
+  store_id: number | null
   stock_quantity: number
   open_status: boolean
   open_date: string
   expiry_date: string
   current_status: string
   shelf_life_days: number
+  batch_number: string
   category?: { name: string }
+  store?: { name: string }
 }
 
 interface Category {
+  id: number
+  name: string
+}
+
+interface Store {
   id: number
   name: string
 }
@@ -105,11 +126,13 @@ const submitting = ref(false)
 const showModal = ref(false)
 const materials = ref<Material[]>([])
 const categories = ref<Category[]>([])
+const stores = ref<Store[]>([])
 const editingId = ref<number | null>(null)
 
 const searchForm = ref({
   keyword: '',
   category_id: null as number | null,
+  store_id: null as number | null,
   status: null as string | null
 })
 
@@ -118,7 +141,9 @@ const form = ref({
   name: '',
   specification: '',
   category_id: null as number | null,
-  shelf_life_days: 7
+  store_id: null as number | null,
+  shelf_life_days: 7,
+  batch_number: ''
 })
 
 const statusOptions = [
@@ -136,12 +161,15 @@ const statusMap: Record<string, { label: string; type: string }> = {
 }
 
 const categoryOptions = ref<{ label: string; value: number }[]>([])
+const storeOptions = ref<{ label: string; value: number }[]>([])
 
 const columns = [
   { title: 'ID', key: 'id', width: 80 },
   { title: '原料编号', key: 'code', width: 120 },
   { title: '原料名称', key: 'name' },
   { title: '规格', key: 'specification' },
+  { title: '所属门店', key: 'store.name', width: 100 },
+  { title: '批次号', key: 'batch_number', width: 140 },
   { title: '分类', key: 'category.name' },
   { title: '库存数量', key: 'stock_quantity', width: 100 },
   {
@@ -190,12 +218,26 @@ async function fetchCategories() {
   }
 }
 
+async function fetchStores() {
+  try {
+    const response = await api.get('/stores')
+    stores.value = response.data
+    storeOptions.value = response.data.map((s: Store) => ({
+      label: s.name,
+      value: s.id
+    }))
+  } catch (error) {
+    message.error('获取门店失败')
+  }
+}
+
 async function fetchMaterials() {
   loading.value = true
   try {
     const params: Record<string, any> = {}
     if (searchForm.value.keyword) params.keyword = searchForm.value.keyword
     if (searchForm.value.category_id) params.category_id = searchForm.value.category_id
+    if (searchForm.value.store_id) params.store_id = searchForm.value.store_id
     if (searchForm.value.status) params.status = searchForm.value.status
     
     const response = await api.get('/materials', { params })
@@ -236,7 +278,9 @@ function handleEdit(row: Material) {
     name: row.name,
     specification: row.specification,
     category_id: row.category_id,
-    shelf_life_days: row.shelf_life_days || 7
+    store_id: row.store_id,
+    shelf_life_days: row.shelf_life_days || 7,
+    batch_number: row.batch_number || ''
   }
   showModal.value = true
 }
@@ -249,7 +293,9 @@ function resetForm() {
     name: '',
     specification: '',
     category_id: null,
-    shelf_life_days: 7
+    store_id: null,
+    shelf_life_days: 7,
+    batch_number: ''
   }
 }
 
@@ -265,6 +311,7 @@ async function handleDelete(id: number) {
 
 onMounted(() => {
   fetchCategories()
+  fetchStores()
   fetchMaterials()
 })
 </script>

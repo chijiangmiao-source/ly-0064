@@ -134,8 +134,9 @@ interface TransferRecord {
   to_store_id: number
   quantity: number
   transfer_date: string
+  batch_number: string
   remark: string
-  material?: { name: string; code: string }
+  material?: { name: string; code: string; batch_number: string }
   from_store?: { name: string }
   to_store?: { name: string }
 }
@@ -147,6 +148,7 @@ interface Material {
   stock_quantity: number
   current_status: string
   store_id: number | null
+  batch_number: string
 }
 
 interface Store {
@@ -221,13 +223,15 @@ const formMaterialOptions = computed(() => {
     if (m.store_id !== form.value.from_store_id) return false
     if (m.stock_quantity <= 0) return false
     if (m.current_status === 'expired') return false
-    if (m.current_status === 'opened') return false
     return true
   })
-  return list.map(m => ({
-    label: `${m.code} - ${m.name} (库存: ${m.stock_quantity}, 状态: ${statusLabel(m.current_status)})`,
-    value: m.id
-  }))
+  return list.map(m => {
+    const batch = m.batch_number ? ` [批次: ${m.batch_number}]` : ''
+    return {
+      label: `${m.code} - ${m.name}${batch} (库存: ${m.stock_quantity}, 状态: ${statusLabel(m.current_status)})`,
+      value: m.id
+    }
+  })
 })
 
 const columns = [
@@ -235,6 +239,7 @@ const columns = [
   { title: '调出门店', key: 'from_store.name', width: 120 },
   { title: '调入门店', key: 'to_store.name', width: 120 },
   { title: '原料', key: 'material.name' },
+  { title: '批次号', key: 'batch_number', width: 140 },
   { title: '调拨数量', key: 'quantity', width: 120 },
   { title: '调拨日期', key: 'transfer_date', width: 120 },
   { title: '备注', key: 'remark' },

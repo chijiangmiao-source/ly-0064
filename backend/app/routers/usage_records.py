@@ -80,6 +80,8 @@ class UsageRecordController(Controller):
             material.stock_quantity = 0
             material.open_status = False
             material.open_date = None
+            material.expiry_date = None
+            material.batch_number = None
 
         db.commit()
         db.refresh(record)

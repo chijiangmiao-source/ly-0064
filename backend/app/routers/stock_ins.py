@@ -44,6 +44,8 @@ class StockInController(Controller):
         material.stock_quantity += data.quantity
         if data.expiry_date and not material.open_status:
             material.expiry_date = data.expiry_date
+        if data.batch_number and not material.batch_number:
+            material.batch_number = data.batch_number
         
         db.commit()
         db.refresh(stock_in)
@@ -57,8 +59,12 @@ class StockInController(Controller):
         material = db.query(Material).filter(Material.id == stock_in.material_id).first()
         if material:
             material.stock_quantity -= stock_in.quantity
-            if material.stock_quantity < 0:
+            if material.stock_quantity <= 0:
                 material.stock_quantity = 0
+                material.open_status = False
+                material.open_date = None
+                material.expiry_date = None
+                material.batch_number = None
         
         db.delete(stock_in)
         db.commit()

@@ -70,8 +70,8 @@ class TransferRecordController(Controller):
         if material.expiry_date and transfer_date > material.expiry_date:
             raise ClientException("该原料已过期，不能调拨")
 
-        if material.open_status:
-            raise ClientException("已开封的原料不能调拨")
+        if material.open_status and material.expiry_date and transfer_date > material.expiry_date:
+            raise ClientException("该原料已开封且已失效，不能调拨")
 
         if material.stock_quantity <= 0:
             raise ClientException("该原料库存不足，不能调拨")
@@ -79,8 +79,11 @@ class TransferRecordController(Controller):
         if data.quantity > material.stock_quantity:
             raise ClientException("调拨数量不能超过调出门店当前库存")
 
+        batch_number = data.batch_number or material.batch_number or ''
+
         record = TransferRecord(
-            **data.model_dump(exclude_unset=True),
+            **data.model_dump(exclude_unset=True, exclude={'batch_number'}),
+            batch_number=batch_number,
             operator_id=current_user.id,
         )
         if not record.transfer_date:
@@ -93,12 +96,15 @@ class TransferRecordController(Controller):
             material.stock_quantity = 0
             material.open_status = False
             material.open_date = None
+            material.expiry_date = None
+            material.batch_number = None
 
         target_material = (
             db.query(Material)
             .filter(
                 Material.code == material.code,
                 Material.store_id == data.to_store_id,
+                Material.batch_number == batch_number,
             )
             .first()
         )
@@ -107,6 +113,8 @@ class TransferRecordController(Controller):
             target_material.stock_quantity += data.quantity
             if not target_material.expiry_date and material.expiry_date:
                 target_material.expiry_date = material.expiry_date
+            if not target_material.batch_number and batch_number:
+                target_material.batch_number = batch_number
         else:
             new_material = Material(
                 code=material.code,
@@ -119,6 +127,7 @@ class TransferRecordController(Controller):
                 open_date=None,
                 expiry_date=material.expiry_date,
                 shelf_life_days=material.shelf_life_days,
+                batch_number=batch_number,
             )
             db.add(new_material)
 
@@ -144,18 +153,26 @@ class TransferRecordController(Controller):
         if from_material:
             from_material.stock_quantity += record.quantity
 
-        to_material = (
-            db.query(Material)
-            .filter(
-                Material.code == from_material.code if from_material else None,
-                Material.store_id == record.to_store_id,
+        batch_number = record.batch_number or ''
+        to_material = None
+        if from_material:
+            to_material = (
+                db.query(Material)
+                .filter(
+                    Material.code == from_material.code,
+                    Material.store_id == record.to_store_id,
+                    Material.batch_number == batch_number,
+                )
+                .first()
             )
-            .first()
-        )
         if to_material:
             to_material.stock_quantity -= record.quantity
-            if to_material.stock_quantity < 0:
+            if to_material.stock_quantity <= 0:
                 to_material.stock_quantity = 0
+                to_material.open_status = False
+                to_material.open_date = None
+                to_material.expiry_date = None
+                to_material.batch_number = None
 
         db.delete(record)
         db.commit()

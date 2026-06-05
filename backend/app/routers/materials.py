@@ -60,7 +60,7 @@ class MaterialController(Controller):
             db.refresh(material)
         except IntegrityError:
             db.rollback()
-            raise ClientException("原料编号已存在")
+            raise ClientException("该门店下已存在相同编号和批次的原料")
         return MaterialResponse.model_validate(material)
 
     async def update(self, material_id: int, data: MaterialUpdate, db: Session) -> MaterialResponse:
