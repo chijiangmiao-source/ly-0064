@@ -90,6 +90,7 @@ interface Material {
   open_date: string
   expiry_date: string
   current_status: string
+  shelf_life_days: number
   category?: { name: string }
 }
 
@@ -235,7 +236,7 @@ function handleEdit(row: Material) {
     name: row.name,
     specification: row.specification,
     category_id: row.category_id,
-    shelf_life_days: 7
+    shelf_life_days: row.shelf_life_days || 7
   }
   showModal.value = true
 }

@@ -66,5 +66,15 @@ class OpenRecordController(Controller):
         record = db.query(OpenRecord).filter(OpenRecord.id == record_id).first()
         if not record:
             raise NotFoundException("Open record not found")
+        
+        material_id = record.material_id
         db.delete(record)
         db.commit()
+        
+        remaining = db.query(OpenRecord).filter(OpenRecord.material_id == material_id).count()
+        if remaining == 0:
+            material = db.query(Material).filter(Material.id == material_id).first()
+            if material:
+                material.open_status = False
+                material.open_date = None
+                db.commit()
