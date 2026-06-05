@@ -61,12 +61,13 @@ import { useAuthStore } from '@/stores/auth'
 import { NIcon } from 'naive-ui'
 import {
   BarChartOutline,
-  StoreOutline,
+  StorefrontOutline,
   ListOutline,
   CubeOutline,
   AddCircleOutline,
   OpenOutline,
   TrashOutline,
+  ArrowRedoOutline,
   PersonOutline,
   LogOutOutline
 } from '@vicons/ionicons5'
@@ -87,7 +88,7 @@ const menuOptions = [
   {
     label: '门店管理',
     key: 'stores',
-    icon: () => h(NIcon, null, { default: () => h(StoreOutline) })
+    icon: () => h(NIcon, null, { default: () => h(StorefrontOutline) })
   },
   {
     label: '原料分类',
@@ -113,6 +114,11 @@ const menuOptions = [
     label: '报损登记',
     key: 'damage-records',
     icon: () => h(NIcon, null, { default: () => h(TrashOutline) })
+  },
+  {
+    label: '领用登记',
+    key: 'usage-records',
+    icon: () => h(NIcon, null, { default: () => h(ArrowRedoOutline) })
   }
 ]
 

@@ -48,7 +48,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, NButton } from 'naive-ui'
 import { AddOutline } from '@vicons/ionicons5'
 import { format } from 'date-fns'
 import api from '@/utils/api'
@@ -95,7 +95,7 @@ const columns = [
     title: '操作',
     key: 'actions',
     render: (row: OpenRecord) => {
-      return h('n-button', {
+      return h(NButton, {
         size: 'small',
         type: 'error',
         quaternary: true,

@@ -55,6 +55,25 @@
       </n-col>
     </n-row>
 
+    <n-row :gutter="16" class="mb-4">
+      <n-col :span="12">
+        <n-card title="近7天领用趋势" class="h-full">
+          <div ref="trendChartRef" style="height: 320px;"></div>
+        </n-card>
+      </n-col>
+      <n-col :span="12">
+        <n-card title="领用最多原料排行" class="h-full">
+          <n-data-table
+            :columns="usageRankingColumns"
+            :data="stats?.usage_ranking || []"
+            :bordered="false"
+            :pagination="false"
+            size="small"
+          />
+        </n-card>
+      </n-col>
+    </n-row>
+
     <n-row :gutter="16">
       <n-col :span="12">
         <n-card title="报损排行" class="h-full">
@@ -69,7 +88,7 @@
       </n-col>
       <n-col :span="12">
         <n-card title="分类库存分布">
-          <div ref="chartRef" style="height: 350px;"></div>
+          <div ref="chartRef" style="height: 320px;"></div>
         </n-card>
       </n-col>
     </n-row>
@@ -90,8 +109,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, h } from 'vue'
-import { useMessage } from 'naive-ui'
+import { ref, onMounted, h, nextTick } from 'vue'
+import { useMessage, NTag } from 'naive-ui'
 import {
   AlertOutline,
   CloseCircleOutline,
@@ -108,6 +127,8 @@ interface DashboardStats {
   total_stock: number
   damage_ranking: DamageRanking[]
   category_stock: CategoryStock[]
+  usage_trend: UsageTrend[]
+  usage_ranking: UsageRanking[]
 }
 
 interface DamageRanking {
@@ -116,6 +137,20 @@ interface DamageRanking {
   material_code: string
   total_damage: number
   damage_count: number
+}
+
+interface UsageRanking {
+  material_id: number
+  material_name: string
+  material_code: string
+  total_quantity: number
+  usage_count: number
+}
+
+interface UsageTrend {
+  date: string
+  total_quantity: number
+  record_count: number
 }
 
 interface CategoryStock {
@@ -138,6 +173,7 @@ const message = useMessage()
 const stats = ref<DashboardStats | null>(null)
 const expiryWarnings = ref<ExpiryWarning[]>([])
 const chartRef = ref<HTMLElement | null>(null)
+const trendChartRef = ref<HTMLElement | null>(null)
 
 const rankingColumns = [
   { title: '排名', key: 'rank', width: 80, render: (_: any, index: number) => index + 1 },
@@ -145,6 +181,14 @@ const rankingColumns = [
   { title: '原料编号', key: 'material_code', width: 120 },
   { title: '报损总量', key: 'total_damage', width: 120 },
   { title: '报损次数', key: 'damage_count', width: 120 }
+]
+
+const usageRankingColumns = [
+  { title: '排名', key: 'rank', width: 80, render: (_: any, index: number) => index + 1 },
+  { title: '原料名称', key: 'material_name' },
+  { title: '原料编号', key: 'material_code', width: 120 },
+  { title: '领用总量', key: 'total_quantity', width: 120 },
+  { title: '领用次数', key: 'usage_count', width: 120 }
 ]
 
 const warningColumns = [
@@ -157,7 +201,7 @@ const warningColumns = [
     width: 120,
     render: (row: ExpiryWarning) => {
       const type = row.days_remaining <= 0 ? 'error' : row.days_remaining <= 3 ? 'warning' : 'info'
-      return h('n-tag', { type }, { default: () => row.days_remaining <= 0 ? '已过期' : `${row.days_remaining}天` })
+      return h(NTag, { type }, { default: () => row.days_remaining <= 0 ? '已过期' : `${row.days_remaining}天` })
     }
   },
   {
@@ -175,7 +219,7 @@ const warningColumns = [
         opened: '已开封',
         in_stock: '在库'
       }
-      return h('n-tag', { type: statusMap[row.current_status] || 'default' }, {
+      return h(NTag, { type: statusMap[row.current_status] || 'default' }, {
         default: () => labelMap[row.current_status] || row.current_status
       })
     }
@@ -186,7 +230,9 @@ async function fetchStats() {
   try {
     const response = await api.get('/dashboard/stats')
     stats.value = response.data
+    await nextTick()
     initChart()
+    initTrendChart()
   } catch (error) {
     message.error('获取统计数据失败')
   }
@@ -203,7 +249,7 @@ async function fetchExpiryWarnings() {
 
 function initChart() {
   if (!chartRef.value || !stats.value) return
-  
+
   const chart = echarts.init(chartRef.value)
   const option = {
     tooltip: {
@@ -239,6 +285,74 @@ function initChart() {
           value: item.total_stock,
           name: item.category_name
         }))
+      }
+    ]
+  }
+  chart.setOption(option)
+}
+
+function initTrendChart() {
+  if (!trendChartRef.value || !stats.value) return
+
+  const chart = echarts.init(trendChartRef.value)
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross',
+        label: {
+          backgroundColor: '#6a7985'
+        }
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: stats.value.usage_trend.map((item: UsageTrend) => item.date.slice(5))
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '领用数量',
+        position: 'left'
+      },
+      {
+        type: 'value',
+        name: '领用次数',
+        position: 'right'
+      }
+    ],
+    series: [
+      {
+        name: '领用数量',
+        type: 'line',
+        smooth: true,
+        itemStyle: {
+          color: '#58a6ff'
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(88, 166, 255, 0.3)' },
+            { offset: 1, color: 'rgba(88, 166, 255, 0.05)' }
+          ])
+        },
+        data: stats.value.usage_trend.map((item: UsageTrend) => item.total_quantity)
+      },
+      {
+        name: '领用次数',
+        type: 'line',
+        smooth: true,
+        yAxisIndex: 1,
+        itemStyle: {
+          color: '#4cb782'
+        },
+        data: stats.value.usage_trend.map((item: UsageTrend) => item.record_count)
       }
     ]
   }
@@ -309,5 +423,13 @@ onMounted(() => {
 
 .h-full {
   height: 100%;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.mt-4 {
+  margin-top: 16px;
 }
 </style>

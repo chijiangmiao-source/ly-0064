@@ -51,6 +51,11 @@ const routes = [
         path: 'damage-records',
         name: 'DamageRecords',
         component: () => import('@/views/DamageRecords.vue')
+      },
+      {
+        path: 'usage-records',
+        name: 'UsageRecords',
+        component: () => import('@/views/UsageRecords.vue')
       }
     ]
   }

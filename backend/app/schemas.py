@@ -180,6 +180,43 @@ class DamageRecordResponse(DamageRecordBase):
         from_attributes = True
 
 
+class UsageRecordBase(BaseModel):
+    material_id: int
+    store_id: int
+    quantity: float = Field(gt=0)
+    usage_date: Optional[date] = None
+    receiver: str
+    remark: Optional[str] = None
+
+
+class UsageRecordCreate(UsageRecordBase):
+    pass
+
+
+class UsageRecordResponse(UsageRecordBase):
+    id: int
+    operator_id: Optional[int] = None
+    created_at: datetime
+    material: Optional[MaterialResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class UsageTrendResponse(BaseModel):
+    date: str
+    total_quantity: float
+    record_count: int
+
+
+class UsageRankingResponse(BaseModel):
+    material_id: int
+    material_name: str
+    material_code: str
+    total_quantity: float
+    usage_count: int
+
+
 class ExpiryWarningResponse(BaseModel):
     id: int
     code: str
@@ -211,3 +248,5 @@ class DashboardStats(BaseModel):
     total_stock: float
     damage_ranking: List[DamageRankingResponse]
     category_stock: List[CategoryStockResponse]
+    usage_trend: List[UsageTrendResponse]
+    usage_ranking: List[UsageRankingResponse]

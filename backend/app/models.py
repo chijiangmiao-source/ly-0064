@@ -64,6 +64,7 @@ class Material(Base):
     stock_ins = relationship("StockIn", back_populates="material")
     open_records = relationship("OpenRecord", back_populates="material")
     damage_records = relationship("DamageRecord", back_populates="material")
+    usage_records = relationship("UsageRecord", back_populates="material")
 
     @property
     def current_status(self):
@@ -121,3 +122,19 @@ class DamageRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     material = relationship("Material", back_populates="damage_records")
+
+
+class UsageRecord(Base):
+    __tablename__ = "usage_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    usage_date = Column(Date, default=date.today)
+    operator_id = Column(Integer, ForeignKey("users.id"))
+    receiver = Column(String(100), nullable=False)
+    remark = Column(String(255))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    material = relationship("Material", back_populates="usage_records")

@@ -3,15 +3,17 @@ from datetime import date, timedelta
 from litestar.controller import Controller
 from litestar.di import Provide
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, cast, Date
 
 from app.database import get_db
-from app.models import Material, DamageRecord, MaterialCategory
+from app.models import Material, DamageRecord, MaterialCategory, UsageRecord
 from app.schemas import (
     DashboardStats,
     ExpiryWarningResponse,
     DamageRankingResponse,
-    CategoryStockResponse
+    CategoryStockResponse,
+    UsageTrendResponse,
+    UsageRankingResponse
 )
 
 
@@ -79,14 +81,73 @@ class DashboardController(Controller):
                 material_count=row.material_count or 0
             ) for row in category_stock_data
         ]
-        
+
+        today = date.today()
+        seven_days_ago = today - timedelta(days=6)
+
+        usage_trend_data = db.query(
+            cast(UsageRecord.usage_date, Date).label('usage_date'),
+            func.sum(UsageRecord.quantity).label('total_quantity'),
+            func.count(UsageRecord.id).label('record_count')
+        ).filter(
+            UsageRecord.usage_date >= seven_days_ago,
+            UsageRecord.usage_date <= today
+        ).group_by(
+            cast(UsageRecord.usage_date, Date)
+        ).all()
+
+        usage_trend_map = {}
+        for row in usage_trend_data:
+            usage_trend_map[row.usage_date.isoformat()] = UsageTrendResponse(
+                date=row.usage_date.isoformat(),
+                total_quantity=row.total_quantity or 0,
+                record_count=row.record_count or 0
+            )
+
+        usage_trend = []
+        for i in range(7):
+            d = today - timedelta(days=6 - i)
+            date_str = d.isoformat()
+            if date_str in usage_trend_map:
+                usage_trend.append(usage_trend_map[date_str])
+            else:
+                usage_trend.append(UsageTrendResponse(
+                    date=date_str,
+                    total_quantity=0,
+                    record_count=0
+                ))
+
+        usage_ranking_data = db.query(
+            UsageRecord.material_id,
+            Material.name,
+            Material.code,
+            func.sum(UsageRecord.quantity).label('total_quantity'),
+            func.count(UsageRecord.id).label('usage_count')
+        ).join(Material).group_by(
+            UsageRecord.material_id,
+            Material.name,
+            Material.code
+        ).order_by(func.sum(UsageRecord.quantity).desc()).limit(10).all()
+
+        usage_ranking = [
+            UsageRankingResponse(
+                material_id=row.material_id,
+                material_name=row.name,
+                material_code=row.code,
+                total_quantity=row.total_quantity or 0,
+                usage_count=row.usage_count or 0
+            ) for row in usage_ranking_data
+        ]
+
         return DashboardStats(
             expiring_soon_count=expiring_soon_count,
             expired_count=expired_count,
             total_materials=total_materials,
             total_stock=total_stock,
             damage_ranking=damage_ranking,
-            category_stock=category_stock
+            category_stock=category_stock,
+            usage_trend=usage_trend,
+            usage_ranking=usage_ranking
         )
 
     async def get_expiry_warnings(self, db: Session) -> List[ExpiryWarningResponse]:

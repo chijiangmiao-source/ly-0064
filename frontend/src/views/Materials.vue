@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, h } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, NTag, NButton } from 'naive-ui'
 import { AddOutline, SearchOutline } from '@vicons/ionicons5'
 import api from '@/utils/api'
 
@@ -150,7 +150,7 @@ const columns = [
     width: 100,
     render: (row: Material) => {
       const status = statusMap[row.current_status] || { label: row.current_status, type: 'default' }
-      return h('n-tag', { type: status.type as any }, { default: () => status.label })
+        return h(NTag, { type: status.type as any }, { default: () => status.label })
     }
   },
   { title: '开封日期', key: 'open_date', width: 120 },
@@ -159,20 +159,20 @@ const columns = [
     title: '操作',
     key: 'actions',
     render: (row: Material) => {
-      return h('div', { style: 'display: flex; gap: 8px;' }, [
-        h('n-button', {
-          size: 'small',
-          type: 'primary',
-          quaternary: true,
-          onClick: () => handleEdit(row)
-        }, { default: () => '编辑' }),
-        h('n-button', {
-          size: 'small',
-          type: 'error',
-          quaternary: true,
-          onClick: () => handleDelete(row.id)
-        }, { default: () => '删除' })
-      ])
+        return h('div', { style: 'display: flex; gap: 8px;' }, [
+          h(NButton, {
+            size: 'small',
+            type: 'primary',
+            quaternary: true,
+            onClick: () => handleEdit(row)
+          }, { default: () => '编辑' }),
+          h(NButton, {
+            size: 'small',
+            type: 'error',
+            quaternary: true,
+            onClick: () => handleDelete(row.id)
+          }, { default: () => '删除' })
+        ])
     }
   }
 ]
