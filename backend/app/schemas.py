@@ -241,6 +241,51 @@ class CategoryStockResponse(BaseModel):
     material_count: int
 
 
+class TransferRecordBase(BaseModel):
+    material_id: int
+    from_store_id: int
+    to_store_id: int
+    quantity: float = Field(gt=0)
+    transfer_date: Optional[date] = None
+    remark: Optional[str] = None
+
+    @field_validator('to_store_id')
+    def stores_must_differ(cls, v, values):
+        if 'from_store_id' in values.data and v == values.data['from_store_id']:
+            raise ValueError('调出门店和调入门店不能相同')
+        return v
+
+
+class TransferRecordCreate(TransferRecordBase):
+    pass
+
+
+class TransferRecordResponse(TransferRecordBase):
+    id: int
+    operator_id: Optional[int] = None
+    created_at: datetime
+    material: Optional[MaterialResponse] = None
+    from_store: Optional[StoreResponse] = None
+    to_store: Optional[StoreResponse] = None
+
+    class Config:
+        from_attributes = True
+
+
+class TransferTrendResponse(BaseModel):
+    date: str
+    total_quantity: float
+    record_count: int
+
+
+class TransferRankingResponse(BaseModel):
+    material_id: int
+    material_name: str
+    material_code: str
+    total_quantity: float
+    transfer_count: int
+
+
 class DashboardStats(BaseModel):
     expiring_soon_count: int
     expired_count: int
@@ -250,3 +295,5 @@ class DashboardStats(BaseModel):
     category_stock: List[CategoryStockResponse]
     usage_trend: List[UsageTrendResponse]
     usage_ranking: List[UsageRankingResponse]
+    transfer_trend: List[TransferTrendResponse]
+    transfer_ranking: List[TransferRankingResponse]

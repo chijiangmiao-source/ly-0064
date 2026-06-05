@@ -138,3 +138,21 @@ class UsageRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     material = relationship("Material", back_populates="usage_records")
+
+
+class TransferRecord(Base):
+    __tablename__ = "transfer_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    material_id = Column(Integer, ForeignKey("materials.id"), nullable=False)
+    from_store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    to_store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
+    quantity = Column(Float, nullable=False)
+    transfer_date = Column(Date, default=date.today)
+    operator_id = Column(Integer, ForeignKey("users.id"))
+    remark = Column(String(255))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    material = relationship("Material")
+    from_store = relationship("Store", foreign_keys=[from_store_id])
+    to_store = relationship("Store", foreign_keys=[to_store_id])

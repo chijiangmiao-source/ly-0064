@@ -74,6 +74,25 @@
       </n-col>
     </n-row>
 
+    <n-row :gutter="16" class="mb-4">
+      <n-col :span="12">
+        <n-card title="近7天调拨趋势" class="h-full">
+          <div ref="transferTrendChartRef" style="height: 320px;"></div>
+        </n-card>
+      </n-col>
+      <n-col :span="12">
+        <n-card title="调拨最多原料排行" class="h-full">
+          <n-data-table
+            :columns="transferRankingColumns"
+            :data="stats?.transfer_ranking || []"
+            :bordered="false"
+            :pagination="false"
+            size="small"
+          />
+        </n-card>
+      </n-col>
+    </n-row>
+
     <n-row :gutter="16">
       <n-col :span="12">
         <n-card title="报损排行" class="h-full">
@@ -129,6 +148,8 @@ interface DashboardStats {
   category_stock: CategoryStock[]
   usage_trend: UsageTrend[]
   usage_ranking: UsageRanking[]
+  transfer_trend: TransferTrend[]
+  transfer_ranking: TransferRanking[]
 }
 
 interface DamageRanking {
@@ -153,6 +174,20 @@ interface UsageTrend {
   record_count: number
 }
 
+interface TransferTrend {
+  date: string
+  total_quantity: number
+  record_count: number
+}
+
+interface TransferRanking {
+  material_id: number
+  material_name: string
+  material_code: string
+  total_quantity: number
+  transfer_count: number
+}
+
 interface CategoryStock {
   category_id: number
   category_name: string
@@ -174,6 +209,7 @@ const stats = ref<DashboardStats | null>(null)
 const expiryWarnings = ref<ExpiryWarning[]>([])
 const chartRef = ref<HTMLElement | null>(null)
 const trendChartRef = ref<HTMLElement | null>(null)
+const transferTrendChartRef = ref<HTMLElement | null>(null)
 
 const rankingColumns = [
   { title: '排名', key: 'rank', width: 80, render: (_: any, index: number) => index + 1 },
@@ -189,6 +225,14 @@ const usageRankingColumns = [
   { title: '原料编号', key: 'material_code', width: 120 },
   { title: '领用总量', key: 'total_quantity', width: 120 },
   { title: '领用次数', key: 'usage_count', width: 120 }
+]
+
+const transferRankingColumns = [
+  { title: '排名', key: 'rank', width: 80, render: (_: any, index: number) => index + 1 },
+  { title: '原料名称', key: 'material_name' },
+  { title: '原料编号', key: 'material_code', width: 120 },
+  { title: '调拨总量', key: 'total_quantity', width: 120 },
+  { title: '调拨次数', key: 'transfer_count', width: 120 }
 ]
 
 const warningColumns = [
@@ -233,6 +277,7 @@ async function fetchStats() {
     await nextTick()
     initChart()
     initTrendChart()
+    initTransferTrendChart()
   } catch (error) {
     message.error('获取统计数据失败')
   }
@@ -353,6 +398,74 @@ function initTrendChart() {
           color: '#4cb782'
         },
         data: stats.value.usage_trend.map((item: UsageTrend) => item.record_count)
+      }
+    ]
+  }
+  chart.setOption(option)
+}
+
+function initTransferTrendChart() {
+  if (!transferTrendChartRef.value || !stats.value) return
+
+  const chart = echarts.init(transferTrendChartRef.value)
+  const option = {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'cross',
+        label: {
+          backgroundColor: '#6a7985'
+        }
+      }
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '3%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      boundaryGap: false,
+      data: stats.value.transfer_trend.map((item: TransferTrend) => item.date.slice(5))
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: '调拨数量',
+        position: 'left'
+      },
+      {
+        type: 'value',
+        name: '调拨次数',
+        position: 'right'
+      }
+    ],
+    series: [
+      {
+        name: '调拨数量',
+        type: 'line',
+        smooth: true,
+        itemStyle: {
+          color: '#f0a020'
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(240, 160, 32, 0.3)' },
+            { offset: 1, color: 'rgba(240, 160, 32, 0.05)' }
+          ])
+        },
+        data: stats.value.transfer_trend.map((item: TransferTrend) => item.total_quantity)
+      },
+      {
+        name: '调拨次数',
+        type: 'line',
+        smooth: true,
+        yAxisIndex: 1,
+        itemStyle: {
+          color: '#a855f7'
+        },
+        data: stats.value.transfer_trend.map((item: TransferTrend) => item.record_count)
       }
     ]
   }

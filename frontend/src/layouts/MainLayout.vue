@@ -68,6 +68,7 @@ import {
   OpenOutline,
   TrashOutline,
   ArrowRedoOutline,
+  SwapHorizontalOutline,
   PersonOutline,
   LogOutOutline
 } from '@vicons/ionicons5'
@@ -119,6 +120,11 @@ const menuOptions = [
     label: '领用登记',
     key: 'usage-records',
     icon: () => h(NIcon, null, { default: () => h(ArrowRedoOutline) })
+  },
+  {
+    label: '原料调拨',
+    key: 'transfer-records',
+    icon: () => h(NIcon, null, { default: () => h(SwapHorizontalOutline) })
   }
 ]
 

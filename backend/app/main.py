@@ -11,6 +11,7 @@ from app.routers.stock_ins import StockInController
 from app.routers.open_records import OpenRecordController
 from app.routers.damage_records import DamageRecordController
 from app.routers.usage_records import UsageRecordController
+from app.routers.transfer_records import TransferRecordController
 from app.routers.dashboard import DashboardController
 
 
@@ -44,6 +45,7 @@ app = Litestar(
         OpenRecordController,
         DamageRecordController,
         UsageRecordController,
+        TransferRecordController,
         DashboardController,
     ],
     cors_config=cors_config,
